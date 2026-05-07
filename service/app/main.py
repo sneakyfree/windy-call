@@ -27,6 +27,7 @@ from app.auth.dependencies import require_passport
 from app.auth.ept import PassportClaims
 from app.auth.jwks import JWKSCache
 from app.config import get_settings
+from app.eii.score_cache import IntegrityScoreCache
 from app.eternitas_client import EternitasClient
 from app.twilio_client import TwilioClient
 from app.twilio_inbound.router import router as twilio_inbound_router
@@ -58,6 +59,10 @@ async def lifespan(app: FastAPI):
         auth_token=settings.twilio_auth_token,
         from_number=settings.twilio_from_number,
     )
+
+    # D.2.2 — score cache feeds the per-tier cost-cap multiplier so
+    # reputation→budget works the same way it does in windy-search.
+    app.state.score_cache = IntegrityScoreCache(eternitas_base_url=settings.eternitas_base_url)
 
     yield
 
