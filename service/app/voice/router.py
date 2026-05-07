@@ -25,7 +25,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import require_passport
+from app.auth.dependencies import require_passport_with_cost_cap
 from app.auth.ept import PassportClaims
 from app.eternitas_client import EternitasClient
 from app.twilio_client import TwilioClient
@@ -90,7 +90,7 @@ def _build_twiml(message: str, voice: str) -> str:
 async def create_voice_call(
     body: CreateCallRequest,
     request: Request,
-    claims: PassportClaims = Depends(require_passport),
+    claims: PassportClaims = Depends(require_passport_with_cost_cap("voice.call")),
 ) -> CreateCallResponse:
     """Place an outbound voice call. The agent's `message` is read aloud
     by Twilio TTS, then the call hangs up.
