@@ -32,7 +32,9 @@ from pydantic import BaseModel
 
 from app.auth.dependencies import require_passport
 from app.auth.ept import PassportClaims
+from app.cell_client import CellClient
 from app.config import get_settings
+from app.eternitas_client import EternitasClient
 from app.twilio_inbound.signature import verify_twilio_signature
 from app.twilio_inbound.voicemail import fetch_voicemails, store_voicemail
 
@@ -96,6 +98,23 @@ def _build_voice_twiml(greeting: str = DEFAULT_GREETING) -> str:
     )
 
 
+async def _resolve_owner(request: Request, number: str) -> str:
+    """Resolve `number` → owner passport via the cell client, with soft
+    fallback to settings.fallback_owner_passport. Centralized so all
+    inbound handlers share the same fallback policy.
+
+    Today the fallback IS the right answer in practice (one number, one
+    passport, +17542772201 → ET26-WIND-Y000). Once per-agent numbers
+    land, an unresolved `to` should drop the call instead of falling
+    through; we'll harden that policy in C.6.b.
+    """
+    cell: CellClient | None = getattr(request.app.state, "cell_client", None)
+    if cell is None or not cell.configured:
+        return get_settings().fallback_owner_passport
+    resolved = await cell.lookup_owner(number)
+    return resolved or get_settings().fallback_owner_passport
+
+
 def _verify_twilio_request(
     settings: Any,
     request: Request,
@@ -142,8 +161,16 @@ async def twilio_inbound_voice(
     call_sid = params.get("CallSid", "")
     from_ = params.get("From", "")
     to = params.get("To", "")
+
+    # C.6 — resolve owner passport for the destination number. Soft-fall
+    # back to the configured fallback so cell-api downtime doesn't take
+    # inbound voice down with it. Just for logging here; the real
+    # integrity event posts in /recording-complete (when we have a
+    # voicemail to attribute).
+    owner = await _resolve_owner(request, to)
     logger.info(
-        "inbound voice call_sid=%s from=%s to=%s", call_sid, from_[:6] + "...", to
+        "inbound voice call_sid=%s from=%s to=%s owner=%s",
+        call_sid, from_[:6] + "...", to, owner,
     )
 
     callback_url = (
@@ -191,6 +218,8 @@ async def twilio_voice_recording_complete(
     )
 
     redis = getattr(request.app.state, "redis", None)
+    owner_passport = await _resolve_owner(request, to)
+
     await store_voicemail(
         redis,
         to=to,
@@ -201,9 +230,34 @@ async def twilio_voice_recording_complete(
             "from": from_,
             "to": to,
             "call_sid": call_sid,
+            "owner_passport": owner_passport,
         },
         max_size=settings.inbox_max_per_number,
     )
+
+    # C.6 — post the integrity event under the resolved owner passport.
+    # Best-effort: don't let an eternitas hiccup keep us from returning
+    # TwiML to Twilio (would trigger a retry storm).
+    eternitas: EternitasClient | None = getattr(request.app.state, "eternitas_client", None)
+    if eternitas is not None and eternitas.configured:
+        try:
+            await eternitas.submit_integrity_event(
+                passport=owner_passport,
+                event_type="voicemail_received",
+                dimension="reliability",
+                delta_hint=1,
+                source="windy-call",
+                context={
+                    "call_sid": call_sid,
+                    "duration_seconds": duration,
+                    "to": to,
+                },
+                idempotency_key=f"voicemail:{recording_sid}",
+            )
+        except Exception as e:
+            logger.warning(
+                "integrity event post failed for voicemail %s: %s", call_sid, e
+            )
 
     return Response(content=_build_thank_you_twiml(), media_type="application/xml")
 

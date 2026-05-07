@@ -43,6 +43,19 @@ class Settings(BaseSettings):
     # so we trust this configured value over request.url).
     twilio_webhook_base_url: str = "https://api.windycall.com"
 
+    # --- Windy Cell (C.6) — number→passport resolver for inbound routing ---
+    # In-network URL on the consolidated EC2 (deploy_backend Docker
+    # network); no TLS in path. Caller falls back to fallback_owner_passport
+    # if cell isn't reachable / number isn't registered.
+    cell_base_url: str = "http://cell-api:8800"
+    cell_internal_key: str | None = None
+    # Used when cell-api is unreachable OR returns 404. Today this is
+    # the founder passport (which owns the only registered number).
+    # Once per-agent numbers are real, having an unknown number fall to
+    # the founder is the wrong policy — but the right policy is "log +
+    # drop" which we'll add in a future codon.
+    fallback_owner_passport: str = "ET26-WIND-Y000"
+
     # --- Voicemail (D.5) ---
     # How many voicemail entries we retain per recipient number. Each
     # entry is metadata only (~300 bytes); audio lives at Twilio for ~30d.

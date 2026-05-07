@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth.dependencies import require_passport
 from app.auth.ept import PassportClaims
 from app.auth.jwks import JWKSCache
+from app.cell_client import CellClient
 from app.config import get_settings
 from app.eii.score_cache import IntegrityScoreCache
 from app.eternitas_client import EternitasClient
@@ -63,6 +64,12 @@ async def lifespan(app: FastAPI):
     # D.2.2 — score cache feeds the per-tier cost-cap multiplier so
     # reputation→budget works the same way it does in windy-search.
     app.state.score_cache = IntegrityScoreCache(eternitas_base_url=settings.eternitas_base_url)
+
+    # C.6 — Windy Cell client for resolving inbound `to` → owner passport.
+    app.state.cell_client = CellClient(
+        base_url=settings.cell_base_url,
+        internal_key=settings.cell_internal_key,
+    )
 
     yield
 
@@ -127,6 +134,7 @@ def create_app() -> FastAPI:
         attribute access since ASGITransport tests skip lifespan."""
         twilio = getattr(app.state, "twilio_client", None)
         eternitas = getattr(app.state, "eternitas_client", None)
+        cell = getattr(app.state, "cell_client", None)
         redis_ok = True
         if settings.redis_url:
             redis = getattr(app.state, "redis", None)
@@ -142,6 +150,7 @@ def create_app() -> FastAPI:
             "redis": redis_ok,
             "twilio_configured": bool(twilio and twilio.configured),
             "eternitas_configured": bool(eternitas and eternitas.configured),
+            "cell_configured": bool(cell and cell.configured),
         }
 
     @app.get("/whoami")
