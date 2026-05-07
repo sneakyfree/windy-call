@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: [
         "https://windycall.com",
         "https://www.windycall.com",
-        "https://app.windyword.ai",
+        "https://account.windyword.ai",
         "http://localhost:5173",
     ])
 
