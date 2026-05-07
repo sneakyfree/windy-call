@@ -88,11 +88,14 @@ class RecordingEternitasClient:
 
 
 class FakeRedisCostCap:
-    """Minimal redis stub for cost_cap.charge primitives (incrby + expire)
-    — sufficient for D.2 tests."""
+    """Minimal redis stub for the windy-call ops:
+      - cost_cap (D.2): incrby + expire on int counters
+      - voicemail (D.5): lpush + ltrim + lrange on lists
+    Different key prefixes keep namespaces disjoint."""
 
     def __init__(self) -> None:
         self._strings: dict[str, int] = {}
+        self._lists: dict[str, list[str]] = {}
 
     async def ping(self) -> bool:
         return True
@@ -106,6 +109,21 @@ class FakeRedisCostCap:
 
     async def expire(self, key: str, seconds: int) -> bool:
         return True
+
+    async def lpush(self, key: str, value: str) -> int:
+        lst = self._lists.setdefault(key, [])
+        lst.insert(0, value)
+        return len(lst)
+
+    async def ltrim(self, key: str, start: int, stop: int) -> bool:
+        lst = self._lists.get(key)
+        if lst is None:
+            return True
+        self._lists[key] = lst[start:stop + 1]
+        return True
+
+    async def lrange(self, key: str, start: int, stop: int) -> list[str]:
+        return self._lists.get(key, [])[start:stop + 1]
 
 
 class StubScoreCache:

@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     # so we trust this configured value over request.url).
     twilio_webhook_base_url: str = "https://api.windycall.com"
 
+    # --- Voicemail (D.5) ---
+    # How many voicemail entries we retain per recipient number. Each
+    # entry is metadata only (~300 bytes); audio lives at Twilio for ~30d.
+    inbox_max_per_number: int = 100
+
     # --- Cost cap (D.2) ---
     # Default $5/month per passport. Tier-based caps (Exceptional gets
     # more, Critical less) are a follow-up codon.
