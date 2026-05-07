@@ -12,6 +12,7 @@ dependencies = [
     "redis>=5.0",
     "pyjwt[crypto]>=2.8",
     "cryptography>=43",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
