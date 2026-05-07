@@ -1,15 +1,18 @@
-"""Windy Call FastAPI app — Phase D.1 scaffold + first SMS endpoint.
+"""Windy Call FastAPI app — voice-only scaffold (post-T.cleanup).
 
-This codon establishes the service skeleton + outbound SMS path.
-Subsequent codons add:
-  D.2  — Per-EII rate limiter + cost cap (mirror windy-search B.3+B.9)
-  D.3  — Outbound voice (POST /voice/call)
-  D.4  — Inbound SMS webhook (Twilio → /webhooks/twilio/sms)
-  D.5  — Inbound voice webhook + TwiML
-  D.6  — Number provisioning per agent (windy-pro hatch wiring)
-  D.7  — Voicemail transcription
-  D.8  — Spam-report + auto-suspension
-  D.9  — Deploy + DNS (api.windycall.com)
+History: D.1 originally shipped SMS + voice in one repo. Per Grant's
+2026-05-07 architectural call, SMS got extracted into the sister
+repo `windy-text`. This service is now voice-only — outbound calls,
+inbound voice webhooks, voicemail, transcription, spam-report.
+
+Roadmap from here:
+  D.2  Per-EII rate limit + cost cap (mirror windy-search B.3+B.9)
+  D.3  Outbound voice — POST /voice/call with TwiML response handler
+  D.4  Inbound voice webhook (Twilio → /webhooks/twilio/voice) + TwiML
+  D.5  Voicemail transcription (Twilio recording webhook + storage)
+  D.6  Per-agent number registry (consume future windy-num)
+  D.7  Spam-report + auto-suspension
+  D.8  Voice-SDK / WebRTC for in-browser calls
 """
 
 from __future__ import annotations
@@ -25,7 +28,6 @@ from app.auth.ept import PassportClaims
 from app.auth.jwks import JWKSCache
 from app.config import get_settings
 from app.eternitas_client import EternitasClient
-from app.sms.router import router as sms_router
 from app.twilio_client import TwilioClient
 
 
@@ -66,10 +68,11 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Windy Call",
         description=(
-            "Agent telephony for the Windy ecosystem. Every endpoint is "
-            "gated by a valid Eternitas passport (EPT JWT). Outbound SMS "
-            "+ voice calls flow through Twilio; integrity events post to "
-            "eternitas after each completed action."
+            "Agent voice telephony for the Windy ecosystem. Every endpoint "
+            "is gated by a valid Eternitas passport (EPT JWT). Outbound + "
+            "inbound voice calls + voicemail flow through Twilio; integrity "
+            "events post to eternitas after each completed action. SMS lives "
+            "in the sister service `windy-text` (api.windytext.com)."
         ),
         version="0.1.0",
         lifespan=lifespan,
@@ -147,7 +150,8 @@ def create_app() -> FastAPI:
             "expires_at": claims.expires_at,
         }
 
-    app.include_router(sms_router)
+    # No capability routers wired yet — voice endpoints (/voice/call,
+    # /voice/voicemail, etc.) land in the D.3+ codons.
 
     return app
 
