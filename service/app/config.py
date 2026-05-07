@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     # so we trust this configured value over request.url).
     twilio_webhook_base_url: str = "https://api.windycall.com"
 
+    # --- Cost cap (D.2) ---
+    # Default $5/month per passport. Tier-based caps (Exceptional gets
+    # more, Critical less) are a follow-up codon.
+    monthly_cost_cap_usd_default: float = 5.0
+    monthly_cost_warning_pct: float = 0.80
+
     cors_origins: list[str] = Field(default_factory=lambda: [
         "https://windycall.com",
         "https://www.windycall.com",

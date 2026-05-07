@@ -87,15 +87,38 @@ class RecordingEternitasClient:
         return {"event_id": 1, "delta_actual": 1}
 
 
+class FakeRedisCostCap:
+    """Minimal redis stub for cost_cap.charge primitives (incrby + expire)
+    — sufficient for D.2 tests."""
+
+    def __init__(self) -> None:
+        self._strings: dict[str, int] = {}
+
+    async def ping(self) -> bool:
+        return True
+
+    async def close(self) -> None:
+        pass
+
+    async def incrby(self, key: str, delta: int) -> int:
+        self._strings[key] = self._strings.get(key, 0) + int(delta)
+        return self._strings[key]
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        return True
+
+
 @pytest_asyncio.fixture
 async def auth_client(ept_keypair):
-    """Test client with JWKS, Twilio, and Eternitas stubs pre-injected."""
+    """Test client with JWKS, Twilio, Eternitas, and cost-cap-Redis stubs."""
     app.state.jwks_cache = StubJWKSCache(ept_keypair["jwks"])
     app.state.twilio_client = RecordingTwilioClient()
     app.state.eternitas_client = RecordingEternitasClient()
+    app.state.redis = FakeRedisCostCap()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.state.jwks_cache = None
     app.state.twilio_client = None
     app.state.eternitas_client = None
+    app.state.redis = None
