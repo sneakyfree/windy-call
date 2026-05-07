@@ -23,13 +23,15 @@ async def test_health_ready_surfaces_dep_state(client):
 
 
 @pytest.mark.asyncio
-async def test_openapi_lists_sms_endpoint(client):
+async def test_openapi_shape(client):
+    """After T.cleanup, /sms/send is gone — voice endpoints land in D.3+."""
     resp = await client.get("/openapi.json")
     assert resp.status_code == 200
     spec = resp.json()
     assert spec["info"]["title"] == "Windy Call"
-    assert "/sms/send" in spec["paths"]
     assert "/whoami" in spec["paths"]
+    assert "/health" in spec["paths"]
+    assert "/sms/send" not in spec["paths"]  # moved to windy-text
 
 
 @pytest.mark.asyncio
