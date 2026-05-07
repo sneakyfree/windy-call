@@ -108,13 +108,33 @@ class FakeRedisCostCap:
         return True
 
 
+class StubScoreCache:
+    """Drop-in for IntegrityScoreCache returning hardcoded scores. Test
+    code overrides `.scores[passport]` to exercise specific tiers."""
+
+    def __init__(self, default_score: int = 500) -> None:
+        self.default_score = default_score
+        self.scores: dict[str, int] = {}
+
+    async def get(self, passport: str) -> int:
+        return self.scores.get(passport, self.default_score)
+
+    def invalidate(self, passport: str | None = None) -> None:
+        if passport is None:
+            self.scores.clear()
+        else:
+            self.scores.pop(passport, None)
+
+
 @pytest_asyncio.fixture
 async def auth_client(ept_keypair):
-    """Test client with JWKS, Twilio, Eternitas, and cost-cap-Redis stubs."""
+    """Test client with JWKS, Twilio, Eternitas, score-cache, and
+    cost-cap-Redis stubs."""
     app.state.jwks_cache = StubJWKSCache(ept_keypair["jwks"])
     app.state.twilio_client = RecordingTwilioClient()
     app.state.eternitas_client = RecordingEternitasClient()
     app.state.redis = FakeRedisCostCap()
+    app.state.score_cache = StubScoreCache(default_score=500)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
@@ -122,3 +142,4 @@ async def auth_client(ept_keypair):
     app.state.twilio_client = None
     app.state.eternitas_client = None
     app.state.redis = None
+    app.state.score_cache = None

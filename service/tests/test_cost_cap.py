@@ -92,3 +92,61 @@ async def test_voice_call_cost_isolated_per_passport(auth_client, ept_keypair):
     )
     assert resp.status_code == 200
     assert resp.headers["X-Cost-Used-USD"].startswith("0.050000")
+
+
+# -------------------------------------------------------------------------
+# D.2.2 — per-tier cost-cap multiplier tests (parallels windy-search B.9.2)
+# -------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_voice_exceptional_tier_50_dollar_cap(auth_client, ept_keypair):
+    from app.main import app
+
+    app.state.score_cache.scores["ET26-VOIC-EXC"] = 950
+    token = sign_test_ept(ept_keypair, passport="ET26-VOIC-EXC")
+    resp = await auth_client.post(
+        "/voice/call",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"to": "+15551234567", "message": "x"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["X-Cost-Tier"] == "exceptional"
+    assert resp.headers["X-Cost-Tier-Multiplier"] == "10"
+    assert resp.headers["X-Cost-Cap-USD"] == "50.00"
+
+
+@pytest.mark.asyncio
+async def test_voice_critical_tier_50_cent_cap(auth_client, ept_keypair):
+    from app.main import app
+
+    app.state.score_cache.scores["ET26-VOIC-CRIT"] = 100
+    token = sign_test_ept(ept_keypair, passport="ET26-VOIC-CRIT")
+    resp = await auth_client.post(
+        "/voice/call",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"to": "+15551234567", "message": "x"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["X-Cost-Tier"] == "critical"
+    assert resp.headers["X-Cost-Cap-USD"] == "0.50"
+
+
+@pytest.mark.asyncio
+async def test_voice_critical_tier_429_at_50_cents(auth_client, ept_keypair):
+    """Critical tier ($0.50 cap) blocks the next call once 50 cents is spent."""
+    from app.eii.cost_cap import _key
+    from app.main import app
+
+    app.state.score_cache.scores["ET26-VOIC-EXH"] = 100
+    redis = app.state.redis
+    redis._strings[_key("ET26-VOIC-EXH")] = 500_000  # $0.50
+
+    token = sign_test_ept(ept_keypair, passport="ET26-VOIC-EXH")
+    resp = await auth_client.post(
+        "/voice/call",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"to": "+15551234567", "message": "x"},
+    )
+    assert resp.status_code == 429
+    assert "critical" in resp.json()["detail"].lower()
