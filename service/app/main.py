@@ -29,6 +29,7 @@ from app.auth.jwks import JWKSCache
 from app.config import get_settings
 from app.eternitas_client import EternitasClient
 from app.twilio_client import TwilioClient
+from app.voice.router import router as voice_router
 
 
 @asynccontextmanager
@@ -150,8 +151,7 @@ def create_app() -> FastAPI:
             "expires_at": claims.expires_at,
         }
 
-    # No capability routers wired yet — voice endpoints (/voice/call,
-    # /voice/voicemail, etc.) land in the D.3+ codons.
+    app.include_router(voice_router)
 
     return app
 

@@ -33,6 +33,25 @@ class SMSResult:
     error_message: str | None
 
 
+@dataclass(frozen=True)
+class CallResult:
+    """Outcome of a Twilio /Calls POST.
+
+    `duration` and `price` are populated only after the call completes;
+    on initial create they're None. The agent can poll status via the
+    Twilio /Calls/{sid}.json endpoint if it wants to know how the call
+    actually went (future codon: webhook for status callbacks).
+    """
+    sid: str
+    status: str           # queued | initiated | ringing | in-progress | completed | busy | failed | no-answer
+    to: str
+    from_: str
+    duration_seconds: int | None
+    price: str | None
+    error_code: int | None
+    error_message: str | None
+
+
 class TwilioClient:
     """Minimal Twilio REST wrapper.
 
@@ -105,6 +124,53 @@ class TwilioClient:
             to=data.get("to", to),
             from_=data.get("from", payload["From"]),
             body=data.get("body", body),
+            price=data.get("price"),
+            error_code=data.get("error_code"),
+            error_message=data.get("error_message"),
+        )
+
+    async def create_call(
+        self,
+        *,
+        to: str,
+        twiml: str,
+        from_number: Optional[str] = None,
+    ) -> CallResult:
+        """POST /Accounts/{sid}/Calls.json — outbound voice call.
+
+        `twiml` is inline TwiML that drives the call once answered, e.g.
+        `<Response><Say>Hello</Say></Response>`. This is simpler than
+        hosting a TwiML URL ourselves and matches the v1 "agent says
+        a thing then hangs up" use case.
+
+        Raises:
+          RuntimeError if the client isn't configured.
+          httpx.HTTPStatusError on non-2xx — caller routes by status.
+        """
+        if not self.configured:
+            raise RuntimeError("Twilio client not configured")
+
+        url = f"{API_BASE}/Accounts/{self.account_sid}/Calls.json"
+        payload = {
+            "To": to,
+            "From": from_number or self.from_number,
+            "Twiml": twiml,
+        }
+        if not payload["From"]:
+            raise RuntimeError("No From number configured (TWILIO_FROM_NUMBER)")
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(url, auth=self._auth(), data=payload)
+
+        resp.raise_for_status()
+        data = resp.json()
+        duration = data.get("duration")
+        return CallResult(
+            sid=data.get("sid", ""),
+            status=data.get("status", "unknown"),
+            to=data.get("to", to),
+            from_=data.get("from", payload["From"]),
+            duration_seconds=int(duration) if duration else None,
             price=data.get("price"),
             error_code=data.get("error_code"),
             error_message=data.get("error_message"),

@@ -23,8 +23,8 @@ def ept_keypair():
 
 
 class RecordingTwilioClient:
-    """Drop-in for TwilioClient that captures send_sms calls without
-    touching the wire."""
+    """Drop-in for TwilioClient that captures send_sms + create_call
+    calls without touching the wire."""
 
     def __init__(self, configured: bool = True, raise_exc: Exception | None = None):
         self._configured = configured
@@ -39,7 +39,8 @@ class RecordingTwilioClient:
     async def send_sms(self, *, to, body, from_number=None):
         from app.twilio_client import SMSResult
         self.calls.append({
-            "to": to, "body": body, "from_number": from_number or self.from_number,
+            "kind": "sms", "to": to, "body": body,
+            "from_number": from_number or self.from_number,
         })
         if self.raise_exc:
             raise self.raise_exc
@@ -49,6 +50,25 @@ class RecordingTwilioClient:
             to=to,
             from_=from_number or self.from_number,
             body=body,
+            price=None,
+            error_code=None,
+            error_message=None,
+        )
+
+    async def create_call(self, *, to, twiml, from_number=None):
+        from app.twilio_client import CallResult
+        self.calls.append({
+            "kind": "call", "to": to, "twiml": twiml,
+            "from_number": from_number or self.from_number,
+        })
+        if self.raise_exc:
+            raise self.raise_exc
+        return CallResult(
+            sid="CA_test_" + str(len(self.calls)),
+            status="queued",
+            to=to,
+            from_=from_number or self.from_number,
+            duration_seconds=None,
             price=None,
             error_code=None,
             error_message=None,
