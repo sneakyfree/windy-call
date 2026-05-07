@@ -30,3 +30,11 @@ async def test_openapi_lists_sms_endpoint(client):
     assert spec["info"]["title"] == "Windy Call"
     assert "/sms/send" in spec["paths"]
     assert "/whoami" in spec["paths"]
+
+
+@pytest.mark.asyncio
+async def test_webhooks_stub_accepts_and_204s(client):
+    """Eternitas firehose inbox — keeps the dispatcher's failure counter
+    at 0 until a real consumer codon lands."""
+    resp = await client.post("/webhooks", json={"event_type": "x"})
+    assert resp.status_code == 204
