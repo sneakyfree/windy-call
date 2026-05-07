@@ -86,6 +86,21 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.post("/webhooks", status_code=204, include_in_schema=False)
+    async def webhooks_inbox() -> None:
+        """Eternitas webhook firehose inbox — accept-and-discard stub.
+
+        Eternitas dispatches firehose events to every registered platform.
+        Three consecutive failed deliveries auto-deactivate the platform
+        key (eternitas/services/webhook_dispatcher.py:272), which would
+        silently break our outbound integrity-event posts. Returning 204
+        here keeps the consecutive_failures counter at 0.
+
+        Real consumption (HMAC verify, integrity.event handling, etc.)
+        lands in a future codon — mirror windy-search/app/webhooks/.
+        """
+        return None
+
     @app.get("/health")
     async def health() -> dict:
         return {
