@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # own number yet. Per-agent number assignment lands in a later codon
     # alongside windy-pro hatch wiring.
     twilio_from_number: str | None = None
+    # Public base URL Twilio is configured to POST inbound voice webhooks
+    # at. Must match the URL Twilio uses to compute X-Twilio-Signature
+    # byte-for-byte (Caddy may rewrite scheme/host on the proxied request,
+    # so we trust this configured value over request.url).
+    twilio_webhook_base_url: str = "https://api.windycall.com"
 
     cors_origins: list[str] = Field(default_factory=lambda: [
         "https://windycall.com",

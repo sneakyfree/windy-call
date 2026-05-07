@@ -29,6 +29,7 @@ from app.auth.jwks import JWKSCache
 from app.config import get_settings
 from app.eternitas_client import EternitasClient
 from app.twilio_client import TwilioClient
+from app.twilio_inbound.router import router as twilio_inbound_router
 from app.voice.router import router as voice_router
 
 
@@ -152,6 +153,7 @@ def create_app() -> FastAPI:
         }
 
     app.include_router(voice_router)
+    app.include_router(twilio_inbound_router)
 
     return app
 
