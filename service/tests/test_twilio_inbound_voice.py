@@ -31,7 +31,8 @@ def test_voice_twiml_default_greeting():
     assert twiml.startswith('<?xml')
     assert '<Say voice="alice">' in twiml
     assert '<Hangup/>' in twiml
-    assert 'text messages' in twiml.lower() or 'text' in twiml.lower()
+    # D.5 changed the default greeting to "leave a message after the beep"
+    assert 'leave a message' in twiml.lower()
 
 
 def test_voice_twiml_xml_escapes_caller_supplied_greeting():
@@ -119,6 +120,9 @@ async def test_voice_inbound_happy_path_returns_twiml(auth_client):
         body = resp.text
         assert '<Response>' in body
         assert '<Say voice="alice">' in body
-        assert '<Hangup/>' in body
+        # D.5: the inbound webhook now returns <Record> + a fallback <Hangup>
+        assert '<Record ' in body
+        assert 'recording-complete' in body  # action callback URL
+        assert '<Hangup/>' in body  # fallback after Say if no recording
     finally:
         settings.twilio_auth_token = saved
