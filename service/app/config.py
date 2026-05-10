@@ -71,6 +71,7 @@ class Settings(BaseSettings):
         "https://windycall.com",
         "https://www.windycall.com",
         "https://account.windyword.ai",
+        "https://windymind.ai",
         "http://localhost:5173",
     ])
 
