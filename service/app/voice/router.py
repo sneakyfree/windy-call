@@ -57,8 +57,7 @@ class CreateCallRequest(BaseModel):
         description="Override platform-default sender (must be a Twilio number you own)",
     )
 
-    class Config:
-        populate_by_name = True
+    model_config = {"populate_by_name": True}
 
 
 class CreateCallResponse(BaseModel):
@@ -68,8 +67,7 @@ class CreateCallResponse(BaseModel):
     from_number: str = Field(..., alias="from")
     integrity_event_posted: bool
 
-    class Config:
-        populate_by_name = True
+    model_config = {"populate_by_name": True}
 
 
 def _build_twiml(message: str, voice: str) -> str:
