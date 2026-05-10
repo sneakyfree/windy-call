@@ -9,7 +9,6 @@ from urllib.parse import urlencode
 
 import pytest
 
-
 AUTH_TOKEN = "32e585f044e0d872a8314b7c51b46f8c"  # WindyFly trial token
 
 
@@ -72,7 +71,10 @@ async def test_voice_inbound_503_when_unconfigured(auth_client):
     saved = settings.twilio_auth_token
     settings.twilio_auth_token = None
     try:
-        resp = await _post_voice(auth_client, {"CallSid": "CA1", "From": "+1", "To": "+1", "CallStatus": "ringing"})
+        resp = await _post_voice(
+            auth_client,
+            {"CallSid": "CA1", "From": "+1", "To": "+1", "CallStatus": "ringing"},
+        )
         assert resp.status_code == 503
     finally:
         settings.twilio_auth_token = saved
@@ -88,7 +90,9 @@ async def test_voice_inbound_403_on_bad_signature(auth_client):
     try:
         resp = await auth_client.post(
             "/webhooks/twilio/voice",
-            content=urlencode({"CallSid": "CA1", "From": "+1", "To": "+1", "CallStatus": "ringing"}),
+            content=urlencode(
+                {"CallSid": "CA1", "From": "+1", "To": "+1", "CallStatus": "ringing"}
+            ),
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
                 "X-Twilio-Signature": "deadbeef",

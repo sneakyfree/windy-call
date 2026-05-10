@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 import httpx
 
@@ -51,7 +50,7 @@ class CellClient:
     def configured(self) -> bool:
         return bool(self.base_url and self.internal_key)
 
-    def _cache_get(self, number: str) -> Optional[str]:
+    def _cache_get(self, number: str) -> str | None:
         hit = self._cache.get(number)
         if not hit:
             return None
@@ -64,7 +63,7 @@ class CellClient:
     def _cache_put(self, number: str, passport: str) -> None:
         self._cache[number] = (passport, time.time() + _CACHE_TTL_SECONDS)
 
-    async def lookup_owner(self, number: str) -> Optional[str]:
+    async def lookup_owner(self, number: str) -> str | None:
         """Resolve `number` → owner passport. Returns None on miss / err."""
         if not self.configured:
             return None

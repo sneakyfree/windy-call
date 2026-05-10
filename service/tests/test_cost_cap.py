@@ -32,7 +32,7 @@ async def test_voice_call_response_carries_cost_headers(auth_client, ept_keypair
 @pytest.mark.asyncio
 async def test_voice_call_429_when_budget_exhausted(auth_client, ept_keypair):
     """Pre-charge the counter past the cap, then verify a fresh call gets 429."""
-    from app.eii.cost_cap import _key, MICROCENTS_PER_USD
+    from app.eii.cost_cap import MICROCENTS_PER_USD, _key
     from app.main import app
 
     passport = "ET26-COST-EXHA"
@@ -54,7 +54,7 @@ async def test_voice_call_429_when_budget_exhausted(auth_client, ept_keypair):
 @pytest.mark.asyncio
 async def test_voice_call_warning_at_threshold(auth_client, ept_keypair):
     """Crossing the 80% warning threshold sets X-Cost-Warning."""
-    from app.eii.cost_cap import _key, MICROCENTS_PER_USD
+    from app.eii.cost_cap import _key
     from app.main import app
 
     passport = "ET26-WARN-AAAA"
@@ -77,7 +77,7 @@ async def test_voice_call_warning_at_threshold(auth_client, ept_keypair):
 @pytest.mark.asyncio
 async def test_voice_call_cost_isolated_per_passport(auth_client, ept_keypair):
     """One passport's exhaustion doesn't lock out a different passport."""
-    from app.eii.cost_cap import _key, MICROCENTS_PER_USD
+    from app.eii.cost_cap import MICROCENTS_PER_USD, _key
     from app.main import app
 
     redis = app.state.redis
