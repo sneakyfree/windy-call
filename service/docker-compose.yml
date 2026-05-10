@@ -1,0 +1,53 @@
+# Local dev compose — bring up windy-call + Redis on a private network.
+# Mirrors windy-search/service/docker-compose.yml so a future prod compose
+# is a near-clone (per DEPLOY.md §6). Postgres lands at M3 when the audit
+# log goes live; Caddy is host-managed (not containerized).
+
+services:
+  call-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory",
+        "128mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
+    volumes:
+      - call-redis-data:/data
+    networks:
+      - call-backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  call-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: windy-call:local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://call-redis:6379/0
+    depends_on:
+      call-redis:
+        condition: service_healthy
+    networks:
+      - call-backend
+    ports:
+      - "127.0.0.1:8600:8600"
+
+volumes:
+  call-redis-data:
+
+networks:
+  call-backend:
+    driver: bridge
