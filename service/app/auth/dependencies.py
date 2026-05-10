@@ -83,8 +83,10 @@ def require_passport_with_cost_cap(capability: str):
             warning_pct=settings.monthly_cost_warning_pct,
         )
 
-        response.headers["X-Cost-Cap-USD"] = f"{decision.cap_microcents / cost_cap.MICROCENTS_PER_USD:.2f}"
-        response.headers["X-Cost-Used-USD"] = f"{decision.used_after / cost_cap.MICROCENTS_PER_USD:.6f}"
+        cap_usd_str = f"{decision.cap_microcents / cost_cap.MICROCENTS_PER_USD:.2f}"
+        used_usd_str = f"{decision.used_after / cost_cap.MICROCENTS_PER_USD:.6f}"
+        response.headers["X-Cost-Cap-USD"] = cap_usd_str
+        response.headers["X-Cost-Used-USD"] = used_usd_str
         response.headers["X-Cost-Capability"] = capability
         response.headers["X-Cost-Tier"] = tier_name
         response.headers["X-Cost-Tier-Multiplier"] = f"{cap_multiplier:g}"
@@ -103,8 +105,8 @@ def require_passport_with_cost_cap(capability: str):
                 ),
                 headers={
                     "Retry-After": "86400",
-                    "X-Cost-Cap-USD": f"{decision.cap_microcents / cost_cap.MICROCENTS_PER_USD:.2f}",
-                    "X-Cost-Used-USD": f"{decision.used_after / cost_cap.MICROCENTS_PER_USD:.6f}",
+                    "X-Cost-Cap-USD": cap_usd_str,
+                    "X-Cost-Used-USD": used_usd_str,
                     "X-Cost-Capability": capability,
                     "X-Cost-Tier": tier_name,
                 },

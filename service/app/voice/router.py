@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from typing import Optional
 from xml.sax.saxutils import escape as xml_escape
 
 import httpx
@@ -133,7 +132,7 @@ async def create_voice_call(
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"twilio network: {e}")
 
-    eternitas: Optional[EternitasClient] = getattr(request.app.state, "eternitas_client", None)
+    eternitas: EternitasClient | None = getattr(request.app.state, "eternitas_client", None)
     posted = False
     if eternitas is not None:
         idem = f"voice:{claims.passport}:{uuid.uuid4().hex}"

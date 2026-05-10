@@ -11,7 +11,6 @@ import pytest
 
 from tests.auth_helpers import sign_test_ept
 
-
 AUTH_TOKEN = "32e585f044e0d872a8314b7c51b46f8c"
 
 

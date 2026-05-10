@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as aioredis
 
@@ -29,7 +29,7 @@ def _key(to_number: str) -> str:
 
 
 async def store_voicemail(
-    redis: Optional[aioredis.Redis],
+    redis: aioredis.Redis | None,
     *,
     to: str,
     payload: dict[str, Any],
@@ -53,7 +53,7 @@ async def store_voicemail(
 
 
 async def fetch_voicemails(
-    redis: Optional[aioredis.Redis],
+    redis: aioredis.Redis | None,
     *,
     to: str,
     limit: int = 25,

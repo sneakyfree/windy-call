@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 import httpx
 
@@ -43,7 +42,8 @@ class CallResult:
     actually went (future codon: webhook for status callbacks).
     """
     sid: str
-    status: str           # queued | initiated | ringing | in-progress | completed | busy | failed | no-answer
+    # queued | initiated | ringing | in-progress | completed | busy | failed | no-answer
+    status: str
     to: str
     from_: str
     duration_seconds: int | None
@@ -64,9 +64,9 @@ class TwilioClient:
 
     def __init__(
         self,
-        account_sid: Optional[str],
-        auth_token: Optional[str],
-        from_number: Optional[str] = None,
+        account_sid: str | None,
+        auth_token: str | None,
+        from_number: str | None = None,
         timeout_seconds: float = 15.0,
     ) -> None:
         self.account_sid = account_sid
@@ -86,7 +86,7 @@ class TwilioClient:
         *,
         to: str,
         body: str,
-        from_number: Optional[str] = None,
+        from_number: str | None = None,
     ) -> SMSResult:
         """POST /Accounts/{sid}/Messages.json — outbound SMS.
 
@@ -134,7 +134,7 @@ class TwilioClient:
         *,
         to: str,
         twiml: str,
-        from_number: Optional[str] = None,
+        from_number: str | None = None,
     ) -> CallResult:
         """POST /Accounts/{sid}/Calls.json — outbound voice call.
 
