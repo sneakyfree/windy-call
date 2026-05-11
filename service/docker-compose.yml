@@ -31,6 +31,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Deployment-identity build args, surfaced via GET /version (MF1).
+        COMMIT_SHA: ${COMMIT_SHA:-}
+        BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
     image: windy-call:local
     restart: unless-stopped
     env_file:

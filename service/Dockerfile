@@ -18,6 +18,12 @@ COPY --chown=appuser:appuser app/ ./app/
 
 USER appuser
 
+# Deployment-identity metadata, surfaced via GET /version (MF1).
+ARG COMMIT_SHA=""
+ARG BUILD_TIMESTAMP=""
+ENV COMMIT_SHA=${COMMIT_SHA}
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+
 EXPOSE 8600
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
