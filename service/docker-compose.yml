@@ -2,6 +2,9 @@
 # Mirrors windy-search/service/docker-compose.yml so a future prod compose
 # is a near-clone (per DEPLOY.md §6). Postgres lands at M3 when the audit
 # log goes live; Caddy is host-managed (not containerized).
+#
+# Explicit project name per ADR-046 (compose project naming discipline).
+name: windycall-dev
 
 services:
   call-redis:
