@@ -1,15 +1,17 @@
 # Windy Call
 
-> **Every Windy Fly agent gets its own phone number.**
+> **Every Windy Fly agent gets a voice on the phone network.**
 >
 > Domain: [windycall.com](https://windycall.com) (Cloudflare, registered 2026-05-06)
-> Status: foundation laid; v1 service in design
+> Status: voice-only service scaffold (SMS extracted to the sister repo `windy-text` per Grant's 2026-05-07 architectural call)
 
 ## What it is
 
-Windy Call is the telephony layer of the Windy ecosystem. From the moment a Windy Fly agent hatches, it can be issued its own phone number — capable of sending and receiving SMS, answering calls, leaving and transcribing voicemails, and placing outbound calls on behalf of its human owner.
+Windy Call is the **voice** telephony layer of the Windy ecosystem. A Windy Fly agent can place outbound calls (Twilio TTS reads a message to a human), answer inbound calls with TwiML, and capture + transcribe voicemails on behalf of its human owner.
 
-The product solves real human pain (privacy: nobody wants to give out their cell number), gives agents a real-world reach (text and call recipients who don't use Windy), and creates one of the strongest retention + monetization moats in the ecosystem ($99 one-time + $9.99/month).
+> **Scope note:** Windy Call is voice-only. SMS (inbound + outbound texting) was extracted into the sister repo `windy-text` (api.windytext.com) on 2026-05-07. References to SMS below describe the original combined vision and are retained for historical context — the SMS-specific endpoints and pricing now live with `windy-text`.
+
+The product solves real human pain (privacy: nobody wants to give out their cell number), gives agents a real-world reach (call recipients who don't use Windy), and creates one of the strongest retention + monetization moats in the ecosystem.
 
 ## Why a separate repo (vs. baked into windy-pro)
 
@@ -34,9 +36,11 @@ Windy Call is the *real-world reach* extension of pillar #2. It's how an agent c
 
 ## Three-phase product roadmap
 
+> Historical (pre-split) roadmap. Phase 1 (SMS) moved to `windy-text`; Windy Call now owns the voice phases (2 + 3).
+
 | Phase | What ships | Effort | Audience |
 |---|---|---|---|
-| **1 — SMS only** | Inbound + outbound SMS via Twilio. Agent receives texts, drafts replies, sends via voice command or autonomously. Number provisioned at hatch. | ~3-4 weeks | Beta users in ballrooms |
+| **1 — SMS only** *(moved to `windy-text`)* | Inbound + outbound SMS via Twilio. Agent receives texts, drafts replies, sends via voice command or autonomously. Number provisioned at hatch. | ~3-4 weeks | Beta users in ballrooms |
 | **2 — Voice answering** | Agent answers calls with its persona, transcribes both sides, plays AI-generated TTS responses. Voicemail transcription. | ~3-4 weeks after Phase 1 | All paid tiers |
 | **3 — Outbound voice + advanced** | Agent places calls (book reservations, contact vendors). Multi-language voice. Group SMS / RCS where supported. | ~6-8 weeks after Phase 2 | Premium tiers |
 
@@ -111,17 +115,18 @@ Stripe-style "smart defaults that prevent most abuse, the rest is on the user." 
 | `POST /v1/numbers/provision` | Provision a Twilio number for an agent (called from hatch ceremony) |
 | `GET /v1/numbers` | List user's agent phone numbers |
 | `POST /v1/numbers/{id}/transfer` | Number portability — port out to another carrier |
-| `POST /v1/sms/send` | Agent sends an SMS |
+| `POST /v1/sms/send` *(moved to `windy-text`)* | Agent sends an SMS |
 | `POST /v1/voice/call` | Agent places a voice call |
 | `GET /v1/conversations` | Conversation history per number |
-| `POST /v1/twilio/webhooks/sms` | Twilio incoming SMS webhook (Twilio → us) |
+| `POST /v1/twilio/webhooks/sms` *(moved to `windy-text`)* | Twilio incoming SMS webhook (Twilio → us) |
 | `POST /v1/twilio/webhooks/voice` | Twilio incoming voice webhook (TwiML response) |
 | `POST /v1/twilio/webhooks/voicemail` | Twilio voicemail recording webhook |
 
 ## Pricing (placeholder until master pricing review)
 
-- **$99 one-time + $9.99/month standalone** (for users on Free tier wanting just an agent number)
-- **Bundled with Ultra ($199/yr) and Max ($299/yr) tiers** at no additional cost
+Pricing is deferred to the master pricing review. The original combined "$99 one-time + $9.99/month" agent-number SKU was scoped around SMS+voice together; with SMS now in the sister repo `windy-text`, the voice-only pricing for Windy Call has not been finalized.
+
+- **Bundled with paid Pro tiers** at no additional cost is the working assumption
 - **Number portability**: included; user can port out anytime if they cancel
 
 ## The killer scenarios (marketing)
