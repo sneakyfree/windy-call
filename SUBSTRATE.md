@@ -32,9 +32,9 @@ windy-call runs **co-located on the consolidated EC2 `54.88.113.79`** alongside 
 
 | Compose name | On-host name | Critical data | Notes |
 |---|---|---|---|
-| `call-redis-data` | `deploy-prod_call-redis-data` ✓ (external; preserved across the 2026-05-20 project rename per Strategy A) | Redis appendonly: voice-provider routing cache, rate-limits | Re-buildable; loss = brief cache miss spike |
+| `call-redis-data` | `deploy-prod_call-redis-data` ✓ (external; preserved across the 2026-05-20 project rename per Strategy A) | Redis appendonly: integrity-score cache, rate-limits, cost-cap counters | Re-buildable; loss = brief cache miss spike |
 
-No persistent app-data volume — windy-call is stateless voice-provider abstraction per ADR-017 + ADR-044 (Retell + Vapi providers).
+No persistent app-data volume — windy-call is a stateless voice service per ADR-017. Voice is delivered via Twilio TwiML `<Say>` (outbound TTS calls) + Twilio inbound voice/voicemail webhooks; there is no third-party voice-provider abstraction in the codebase.
 
 ## Bind mounts
 
@@ -63,19 +63,15 @@ External shared bridge `deploy_backend` ✓ (committed compose declares `network
 - `REDIS_URL` (in-network `redis://call-redis:6379/0`)
 - `ENVIRONMENT=production`
 
-**Required for voice providers** (per ADR-044 V1.5 voice-provider abstraction):
-- `RETELL_API_KEY` (primary)
-- `VAPI_API_KEY` (fallback)
+**Required for upstream auth** (per `service/app/config.py`):
+- `ETERNITAS_JWKS_URL` (agents authenticate via Eternitas EPT, ES256)
+- `ETERNITAS_BASE_URL`, `ETERNITAS_PLATFORM_API_KEY` (post integrity events)
 
-**Required for upstream auth:**
-- `WINDY_PRO_JWKS_URL` (humans via Pro JWKS RS256)
-- `ETERNITAS_JWKS_URL` (agents via Eternitas EPT)
+**Required for inbound voice number coordination** (per Triad master plan):
+- `CELL_BASE_URL`, `CELL_INTERNAL_KEY` (number→passport resolver for inbound routing)
 
-**Required for SMS/voice number coordination** (per Triad master plan):
-- `WINDY_CELL_API_URL` (for number lookup)
-
-**Required for Twilio share** (per `[[reference_text_call_split]]` — shared `+17542772201`):
-- `TWILIO_*` credentials (in lockbox; primary CP UI-only per `[[feedback_twilio_primary_cp_ui_only]]`)
+**Required for Twilio voice** (per `[[reference_text_call_split]]` — shared `+17542772201`):
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `TWILIO_WEBHOOK_BASE_URL` (in lockbox; primary CP UI-only per `[[feedback_twilio_primary_cp_ui_only]]`)
 
 **MF1 deploy-identity (set by deploy workflow):**
 - `COMMIT_SHA`, `BUILD_TIMESTAMP`, `ENVIRONMENT=production`
@@ -104,7 +100,7 @@ Reproducible from git-state alone (with lockbox-restored `.env.production` and t
 5. Verify:
    - `curl https://api.windycall.com/health` → `{"status":"healthy"}`
    - `curl https://api.windycall.com/version` → MF1 metadata
-   - Voice provider round-trip: place test call via Retell
+   - Voice round-trip: place a test outbound call via `POST /voice/call` (Twilio TwiML `<Say>`)
 
 ## Audit history
 
@@ -112,11 +108,11 @@ Reproducible from git-state alone (with lockbox-restored `.env.production` and t
 |---|---|---|
 | 2026-05-22 | Autonomous CTO loop T2.2 backfill (triad batch) | First substrate manifest. Live audit pending. |
 | 2026-05-26 | Prod-compose-capture campaign (5 parallel SSH-verified captures) | `deploy-prod/docker-compose.yml` committed to git. **Corrected port binding** (`127.0.0.1:8610->8600`, NOT `:8600`) — Caddy upstream targets host port 8610 directly; container internal port stays 8600. Corrected host EC2 (consolidated `54.88.113.79`, not own EC2). Corrected network (shared `deploy_backend`, not isolated `call-backend`). Promoted ⓘ→✓ on project name, container names, volume on-host name, external network. |
+| 2026-06-06 | Doc reconciliation against `service/app/` | Removed unwired voice-provider claims: voice is Twilio TwiML `<Say>` + inbound webhooks, **not** a Retell/Vapi abstraction (no `RETELL_API_KEY`/`VAPI_API_KEY` in `config.py` or anywhere in code). Dropped ADR-044 references. Corrected env-var names to match `service/app/config.py` (`ETERNITAS_*`, `CELL_*`, explicit `TWILIO_*`; removed phantom `WINDY_PRO_JWKS_URL`/`WINDY_CELL_API_URL`). |
 
 ## Cross-references
 
 - ADR-017: `kit-army-config/docs/adr-017-windy-triad-architecture.md`
-- ADR-044: voice-provider abstraction (Retell + Vapi)
 - ADR-048: substrate-as-code
 - windy-search SUBSTRATE.md (closest sibling): `/Users/thewindstorm/windy-search/SUBSTRATE.md`
 - Memory: `reference_text_call_split.md` (call vs text port/domain split)
